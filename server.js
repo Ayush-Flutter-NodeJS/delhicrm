@@ -10,7 +10,7 @@ const xlsx = require("xlsx");
 const upload = multer({ dest: "uploads/" });
 const bcrypt = require("bcrypt");
 const app = express();
-const port = 3000;
+const port = 4000;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -161,8 +161,6 @@ app.post("/login", (req, res) => {
   });
 });
 
-
-
 ////////////////////////////
 
 // === Get All Users ===
@@ -171,14 +169,14 @@ app.get("/users", (req, res) => {
   db.query(sql, (err, results) => {
     if (err) {
       console.error("Error fetching users:", err);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Failed to fetch users" 
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch users",
       });
     }
     res.json({
       success: true,
-      data: results
+      data: results,
     });
   });
 });
@@ -187,7 +185,7 @@ app.get("/users", (req, res) => {
 app.get("/attendance", (req, res) => {
   try {
     const { month, year, userId, userName, status } = req.query;
-    
+
     let query = `
       SELECT 
         a.*,
@@ -197,60 +195,59 @@ app.get("/attendance", (req, res) => {
       WHERE 1=1
     `;
     let params = [];
-    
+
     // Add filters
     if (month && year) {
-      query += ' AND MONTH(a.date) = ? AND YEAR(a.date) = ?';
+      query += " AND MONTH(a.date) = ? AND YEAR(a.date) = ?";
       params.push(month, year);
     } else if (year) {
-      query += ' AND YEAR(a.date) = ?';
+      query += " AND YEAR(a.date) = ?";
       params.push(year);
     }
-    
+
     if (userId) {
-      query += ' AND a.user_id = ?';
+      query += " AND a.user_id = ?";
       params.push(userId);
     }
-    
+
     if (userName) {
-      query += ' AND u.name LIKE ?';
+      query += " AND u.name LIKE ?";
       params.push(`%${userName}%`);
     }
-    
-    if (status && status !== 'All') {
-      query += ' AND a.status = ?';
+
+    if (status && status !== "All") {
+      query += " AND a.status = ?";
       params.push(status);
     }
-    
-    query += ' ORDER BY a.date DESC, u.name ASC';
-    
+
+    query += " ORDER BY a.date DESC, u.name ASC";
+
     db.query(query, params, (err, results) => {
       if (err) {
         console.error("Error fetching attendance:", err);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Failed to fetch attendance data" 
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch attendance data",
         });
       }
-      
+
       // Calculate summary if needed
       let summary = {};
       if (userId || userName) {
         summary = calculateAttendanceSummary(results);
       }
-      
+
       res.json({
         success: true,
         data: results,
-        summary: summary
+        summary: summary,
       });
     });
-    
   } catch (error) {
     console.error("Error in attendance API:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Internal server error" 
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 });
@@ -258,14 +255,14 @@ app.get("/attendance", (req, res) => {
 // === Get Attendance Summary for a User ===
 app.get("/attendance/summary", (req, res) => {
   const { userId, month, year } = req.query;
-  
+
   if (!userId || !month || !year) {
     return res.status(400).json({
       success: false,
-      message: "userId, month, and year are required parameters"
+      message: "userId, month, and year are required parameters",
     });
   }
-  
+
   const query = `
     SELECT 
       status,
@@ -276,48 +273,48 @@ app.get("/attendance/summary", (req, res) => {
       AND YEAR(date) = ?
     GROUP BY status
   `;
-  
+
   db.query(query, [userId, month, year], (err, results) => {
     if (err) {
       console.error("Error fetching attendance summary:", err);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Failed to fetch attendance summary" 
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch attendance summary",
       });
     }
-    
+
     // Format the summary
     const summary = {
       present: 0,
       absent: 0,
       leave: 0,
       holiday: 0,
-      half_day: 0
+      half_day: 0,
     };
-    
-    results.forEach(row => {
-      const status = row.status.toLowerCase().replace(' ', '_');
+
+    results.forEach((row) => {
+      const status = row.status.toLowerCase().replace(" ", "_");
       if (summary.hasOwnProperty(status)) {
         summary[status] = row.count;
       }
     });
-    
+
     // Get user details
     const userQuery = "SELECT name FROM users WHERE id = ?";
     db.query(userQuery, [userId], (userErr, userResults) => {
       if (userErr) {
         console.error("Error fetching user details:", userErr);
-        return res.status(500).json({ 
-          success: false, 
-          message: "Failed to fetch user details" 
+        return res.status(500).json({
+          success: false,
+          message: "Failed to fetch user details",
         });
       }
-      
+
       res.json({
         success: true,
         user: userResults[0] || {},
         summary: summary,
-        total: results.reduce((sum, row) => sum + row.count, 0)
+        total: results.reduce((sum, row) => sum + row.count, 0),
       });
     });
   });
@@ -331,16 +328,16 @@ function calculateAttendanceSummary(attendanceData) {
     leave: 0,
     holiday: 0,
     half_day: 0,
-    full_day: 0
+    full_day: 0,
   };
-  
-  attendanceData.forEach(record => {
-    const status = record.status.toLowerCase().replace(' ', '_');
+
+  attendanceData.forEach((record) => {
+    const status = record.status.toLowerCase().replace(" ", "_");
     if (summary.hasOwnProperty(status)) {
       summary[status]++;
     }
   });
-  
+
   return summary;
 }
 
@@ -348,11 +345,9 @@ function calculateAttendanceSummary(attendanceData) {
 app.get("/attendance/status-options", (req, res) => {
   res.json({
     success: true,
-    data: ["Present", "Absent", "Leave", "Holiday", "Half Day", "Full Day"]
+    data: ["Present", "Absent", "Leave", "Holiday", "Half Day", "Full Day"],
   });
 });
-
-
 
 // === Assign Leads Randomly ===
 function shuffleArray(array) {
