@@ -797,6 +797,8 @@ app.get("/admin/recent-activities", (req, res) => {
 });
 
 // === Get Counselor Performance ===
+
+// === Get Counselor Performance ===
 app.get("/admin/counselor-performance", (req, res) => {
   const { startDate, endDate } = req.query;
 
@@ -805,6 +807,9 @@ app.get("/admin/counselor-performance", (req, res) => {
       u.id as counselor_id,
       u.name as counselor_name,
       COUNT(l.id) as total_leads,
+      SUM(CASE WHEN l.status = 'Follow-up' THEN 1 ELSE 0 END) as follow_up_count,
+      SUM(CASE WHEN l.status = 'Interested' THEN 1 ELSE 0 END) as interested_count,
+      SUM(CASE WHEN l.status = 'Not Interested' THEN 1 ELSE 0 END) as not_interested_count,
       SUM(CASE WHEN l.status = 'Deal Done' THEN 1 ELSE 0 END) as deals_closed,
       (SUM(CASE WHEN l.status = 'Deal Done' THEN 1 ELSE 0 END) / COUNT(l.id)) * 100 as conversion_rate
     FROM users u
@@ -826,7 +831,6 @@ app.get("/admin/counselor-performance", (req, res) => {
     res.send(results);
   });
 });
-
 // POST /mark-checkout
 app.post("/mark-checkout", (req, res) => {
   const employeeId = req.body.employeeId;
