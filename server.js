@@ -757,8 +757,9 @@ app.get("/admin/active-sessions", (req, res) => {
 });
 
 // === Get Recent Activities ===
+// === Get Recent Activities ===
 app.get("/admin/recent-activities", (req, res) => {
-  const { startDate, endDate, counselorId } = req.query;
+  const { startDate, endDate, counselorId, status } = req.query;
 
   let sql = `
     SELECT 
@@ -786,6 +787,11 @@ app.get("/admin/recent-activities", (req, res) => {
   if (counselorId) {
     sql += ` AND l.assigned_to = ?`;
     params.push(counselorId);
+  }
+
+  if (status && status !== 'All Status') {
+    sql += ` AND l.status = ?`;
+    params.push(status);
   }
 
   sql += ` ORDER BY l.status_updated_at DESC LIMIT 50`;
